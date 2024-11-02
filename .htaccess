@@ -1,0 +1,439 @@
+# -------------------------------
+# [CORE] Core settings
+# -------------------------------
+<IfModule mod_rewrite.c>
+    
+    # Disable server signature to prevent information disclosure
+    ServerSignature Off
+
+    # Protect against DOS attacks by limiting file upload size (10MB)
+    LimitRequestBody 10240000
+
+    # Secure directory by disabling script execution for certain file types
+    AddHandler cgi-script .php .pl .py .jsp .asp .htm .shtml .sh .cgi
+    Options -ExecCGI
+
+    # Enable automatic spelling correction for URLs
+    <IfModule mod_speling.c>
+        CheckSpelling On
+    </IfModule>
+
+    RewriteEngine On
+    # Disable directory listing and unnecessary multi-view handling for security
+    Options +FollowSymLinks -Indexes -MultiViews
+    RewriteBase /
+
+    # Redirect www to non-www with HTTPS enforced
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+    # Hide php extention
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.+)$ $1.php [L]
+</IfModule>
+
+# --------------------------------
+# Enable GZIP compression for content
+# --------------------------------
+<IfModule mod_deflate.c>
+    
+    # Force deflate for mangled headers
+    # developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping/
+    <IfModule mod_setenvif.c>
+        <IfModule mod_headers.c>
+            SetEnvIfNoCase ^(Accept-EncodXng|X-cept-Encoding|X{15}|~{15}|-{15})$ ^((gzip|deflate)\s*,?\s*)+|[X~-]{4,13}$ HAVE_Accept-Encoding
+            RequestHeader append Accept-Encoding "gzip,deflate" env=HAVE_Accept-Encoding
+        </IfModule>
+    </IfModule>
+</IfModule>
+
+<IfModule filter_module>
+    FilterDeclare COMPRESS
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/html
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/css
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/plain
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/x-component
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/javascript
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/json
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xhtml+xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/rss+xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/atom+xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/vnd.ms-fontobject
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $image/svg+xml
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/x-font-ttf
+    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $font/opentype
+    FilterChain COMPRESS
+    FilterProtocol COMPRESS DEFLATE change=yes;byteranges=no
+</IfModule>
+
+# 8G FIREWALL v1.3 20240222
+# https://perishablepress.com/8g-firewall/
+
+# 8G:[CORE]
+
+# 8G:[USER AGENT]
+<IfModule mod_rewrite.c>
+
+        RewriteCond %{HTTP_USER_AGENT} ([a-z0-9]{2000,}) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (&lt;|%0a|%0d|%27|%3c|%3e|%00|0x00|\\\x22) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (ahrefs|archiver|curl|libwww-perl|pycurl|scan) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (oppo\sa33|(c99|php|web)shell|site((.){0,2})copier) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (base64_decode|bin/bash|disconnect|eval|unserializ) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (acapbot|acoonbot|alexibot|asterias|attackbot|awario|backdor|becomebot|binlar|blackwidow|blekkobot|blex|blowfish|bullseye|bunnys|butterfly|careerbot|casper) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (checkpriv|cheesebot|cherrypick|chinaclaw|choppy|clshttp|cmsworld|copernic|copyrightcheck|cosmos|crescent|datacha|(\b)demon(\b)|diavol|discobot|dittospyder) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (dotbot|dotnetdotcom|dumbot|econtext|emailcollector|emailsiphon|emailwolf|eolasbot|eventures|extract|eyenetie|feedfinder|flaming|flashget|flicky|foobot|fuck) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (g00g1e|getright|gigabot|go-ahead-got|gozilla|grabnet|grafula|harvest|heritrix|httracks?|icarus6j|jetbot|jetcar|jikespider|kmccrew|leechftp|libweb|liebaofast) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (linkscan|linkwalker|loader|lwp-download|majestic|masscan|miner|mechanize|mj12bot|morfeus|moveoverbot|netmechanic|netspider|nicerspro|nikto|ninja|nominet|nutch) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (octopus|pagegrabber|petalbot|planetwork|postrank|proximic|purebot|queryn|queryseeker|radian6|radiation|realdownload|remoteview|rogerbot|scan|scooter|seekerspid) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (semalt|siclab|sindice|sistrix|sitebot|siteexplorer|sitesnagger|skygrid|smartdownload|snoopy|sosospider|spankbot|spbot|sqlmap|stackrambler|stripper|sucker|surftbot) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (sux0r|suzukacz|suzuran|takeout|teleport|telesoft|true_robots|turingos|turnit|vampire|vikspider|voideye|webleacher|webreaper|webstripper|webvac|webviewer|webwhacker) [NC,OR]
+        RewriteCond %{HTTP_USER_AGENT} (winhttp|wwwoffle|woxbot|xaldon|xxxyy|yamanalab|yioopbot|youda|zeus|zmeu|zune|zyborg) [NC]
+
+        RewriteRule .* - [F]
+
+# RewriteRule .* /nG_log.php?log [END,NE,E=nG_USER_AGENT:%1]
+
+</IfModule>
+# 8G:[REMOTE HOST]
+<IfModule mod_rewrite.c>
+
+        RewriteCond %{REMOTE_HOST} (163data|amazonaws|colocrossing|crimea|g00g1e|justhost|kanagawa|loopia|masterhost|onlinehome|poneytel|sprintdatacenter|reverse.softlayer|safenet|ttnet|woodpecker|wowrack) [NC]
+
+        RewriteRule .* - [F]
+
+# RewriteRule .* /nG_log.php?log [END,NE,E=nG_REMOTE_HOST:%1]
+
+</IfModule>
+# 8G:[HTTP REFERRER]
+<IfModule mod_rewrite.c>
+
+        RewriteCond %{HTTP_REFERER} (order(\s|%20)by(\s|%20)1--) [NC,OR]
+        RewriteCond %{HTTP_REFERER} (@unlink|assert\(|print_r\(|x00|xbshell) [NC,OR]
+        RewriteCond %{HTTP_REFERER} (100dollars|best-seo|blue\spill|cocaine|ejaculat|erectile|erections|hoodia|huronriveracres|impotence|levitra|libido|lipitor|mopub\.com|phentermin) [NC,OR]
+        RewriteCond %{HTTP_REFERER} (pornhelm|pro[sz]ac|sandyauer|semalt\.com|social-buttions|todaperfeita|tramadol|troyhamby|ultram|unicauca|valium|viagra|vicodin|xanax|ypxaieo) [NC]
+
+        RewriteRule .* - [F]
+
+# RewriteRule .* /nG_log.php?log [END,NE,E=nG_HTTP_REFERRER:%1]
+
+</IfModule>
+# 8G:[HTTP COOKIE]
+<IfModule mod_rewrite.c>
+
+        RewriteCond %{HTTP_COOKIE} (<|>|\'|%0A|%0D|%27|%3C|%3E|%00) [NC]
+
+        RewriteRule .* - [F]
+
+# RewriteRule .* /nG_log.php?log [END,NE,E=nG_HTTP_COOKIE:%1]
+
+</IfModule>
+
+# 8G:[REQUEST METHOD]
+<IfModule mod_rewrite.c>
+
+        RewriteCond %{REQUEST_METHOD} ^(connect|debug|move|trace|track) [NC]
+
+        RewriteRule .* - [F]
+
+# RewriteRule .* /nG_log.php?log [END,NE,E=nG_REQUEST_METHOD:%1]
+
+</IfModule>
+
+# --------------------------------
+# MIME Types and Charset settings
+# --------------------------------
+    
+# Set custom MIME types for various file extensions
+# You can remove the mime types you do not need
+<IfModule mod_mime.c>
+  # Data interchange
+    AddType application/atom+xml      atom
+    AddType application/json          json map topojson
+    AddType application/ld+json       jsonld
+    AddType application/rss+xml       rss
+    AddType application/geo+json      geojson
+    AddType application/rdf+xml       rdf
+    AddType application/xml           xml
+  # JavaScript
+    AddType text/javascript               js mjs
+  # Manifest files
+    AddType application/manifest+json     webmanifest
+    AddType application/x-web-app-manifest+json         webapp
+    AddType text/cache-manifest           appcache
+  # Media files
+    AddType audio/mp4                     f4a f4b m4a 
+    AddType audio/flac                    flac
+    AddType audio/acc                     acc
+    AddType audio/webm                    weba
+    AddType video/webm                    webm
+    AddType application/vnd.apple.mpegurl m3u8
+    AddType audio/mpegurl                 m3u8
+    AddType application/x-mpegURL         m3u8
+    AddType video/MP2T                    ts
+    AddType audio/ogg                     oga ogg opus
+    AddType image/bmp                     bmp
+    AddType image/svg+xml                 svg svgz
+    AddType image/webp                    webp
+    AddType video/mp4                     f4v f4p m4v mp4
+    AddType video/ogg                     ogv
+    AddType video/webm                    webm
+    AddType image/x-icon                  cur ico
+  # HEIF Images
+    AddType image/heic                    heic
+    AddType image/heif                    heif
+  # HEIF Image Sequence
+    AddType image/heics                   heics
+    AddType image/heifs                   heifs
+  # AVIF Images
+    AddType image/avif                    avif
+  # AVIF Image Sequence
+    AddType image/avis                    avis
+  # WebAssembly
+    AddType application/wasm              wasm
+  # Web fonts
+    AddType font/woff                         woff
+    AddType font/woff2                        woff2
+    AddType application/vnd.ms-fontobject     eot
+    AddType font/ttf                          ttf
+    AddType font/collection                   ttc
+    AddType font/otf                          otf
+  # Other
+    AddType application/octet-stream          safariextz
+    AddType application/x-bb-appworld         bbaw
+    AddType application/x-chrome-extension    crx
+    AddType application/x-opera-extension     oex
+    AddType application/x-xpinstall           xpi
+    AddType text/calendar                     ics
+    AddType text/markdown                     markdown md
+    AddType text/vcard                        vcard vcf
+    AddType text/vnd.rim.location.xloc        xloc
+    AddType text/vtt                          vtt
+    AddType text/x-component                  htc
+    # Default Charset
+    AddDefaultCharset utf-8
+    AddCharset utf-8 .appcache \
+    .bbaw \
+    .css \
+    .htc \
+    .ics \
+    .js \
+    .json \
+    .manifest \
+    .map \
+    .markdown \
+    .md \
+    .mjs \
+    .topojson \
+    .vtt \
+    .vcard \
+    .vcf \
+    .webmanifest \
+    .xloc
+</IfModule>
+<IfModule mod_rewrite.c>
+<IfModule mod_expires.c>
+  ExpiresActive on
+
+# Perhaps better to whitelist expires rules? Perhaps.
+  ExpiresDefault                          "access plus 1 month"
+
+# cache.appcache needs re-requests in FF 3.6 (thx Remy ~Introducing HTML5)
+  ExpiresByType text/cache-manifest       "access plus 0 seconds"
+
+# Your document html
+  ExpiresByType text/html                 "access plus 0 seconds"
+
+# Data
+  ExpiresByType text/xml                  "access plus 0 seconds"
+  ExpiresByType application/xml           "access plus 0 seconds"
+  ExpiresByType application/json          "access plus 0 seconds"
+
+# RSS feed
+  ExpiresByType application/rss+xml       "access plus 1 hour"
+
+# Favicon (cannot be renamed)
+  ExpiresByType image/x-icon              "access plus 1 year"
+
+# Media: images, video, audio
+  ExpiresByType image/gif                 "access plus 1 month"
+  ExpiresByType image/png                 "access plus 1 month"
+  ExpiresByType image/jpg                 "access plus 1 month"
+  ExpiresByType image/jpeg                "access plus 1 month"
+  ExpiresByType video/ogg                 "access plus 1 month"
+  ExpiresByType audio/ogg                 "access plus 1 month"
+  ExpiresByType video/mp4                 "access plus 1 month"
+  ExpiresByType video/webm                "access plus 1 month"
+
+# HTC files  (css3pie)
+  ExpiresByType text/x-component          "access plus 1 month"
+
+# Webfonts
+  ExpiresByType font/truetype             "access plus 1 month"
+  ExpiresByType font/opentype             "access plus 1 month"
+  ExpiresByType application/x-font-woff   "access plus 1 month"
+  ExpiresByType image/svg+xml             "access plus 1 month"
+  ExpiresByType application/vnd.ms-fontobject "access plus 1 month"
+
+# CSS and JavaScript
+  ExpiresByType text/css                  "access plus 1 year"
+  ExpiresByType application/javascript    "access plus 1 year"
+  ExpiresByType text/javascript           "access plus 1 year"
+
+  <IfModule mod_headers.c>
+    Header append Cache-Control "public"
+  </IfModule>
+
+</IfModule>
+# BEGIN Disable Directory Browsing
+    
+# END Disable Directory Browsing
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+
+# add a trailing slash to /wp-admin
+RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+#RewriteRule . index.php [L]
+</IfModule>
+
+  
+# --------------------------------
+# Enable HTTP Security Headers
+# --------------------------------
+<IfModule mod_headers.c>
+        # remove server information for security protection
+        Header unset Server
+
+        #Header set Sec-Fetch-Dest document
+	      #Header set Sec-Fetch-Mode navigate
+	      #Header set Sec-Fetch-Site cross-site
+	      #Header set Sec-Fetch-User ?1	
+
+        # Content Security policy and Feature Policy
+        Header always set Content-Security-Policy "default-src 'self'"
+        # OR
+        #Header set Content-Security-Policy "default-src * data:; script-src https: 'unsafe-inline' 'unsafe-eval'; style-src https: 'unsafe-inline'"
+  
+        #Header set Feature-Policy "camera 'none'; fullscreen 'self'; geolocation *; microphone 'none'; autoplay *"
+
+        # -------
+        #  CORS 
+        # -------
+        <IfModules mod_rewrite.c>
+          ## Handling Options for the CORS
+          ## Allows for Pre-check to setup CORS requests
+          RewriteCond %{REQUEST_METHOD} OPTIONS
+          RewriteRule ^(.*)$ $1 [L,R=204]
+
+        <IfModules>
+        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
+	      Header always set Expect-CT "enforce, max-age=0"
+        
+	      #Header set Cross-Origin-Embedder-Policy: require-corp; report-to="https://domain.com/reports/"
+	      #Header set Cross-Origin-Opener-Policy: unsafe-none; report-to="https://domain.com/reports/"
+
+
+        ## Enable Cors 
+        # Option 1
+	         Header add Access-Control-Allow-Origin "*" 
+
+        # Option 2 
+           # Capture the current request's origin domain dynamically
+           SetEnvIf Origin "^https?://(.*)$" OriginHeader=$0
+    
+           # Apply Access-Control-Allow-Origin dynamically based on the Origin header
+           Header always set Access-Control-Allow-Origin %{OriginHeader}e env=OriginHeader
+
+        # Specify the CORS Headers
+        Header set Access-Control-Allow-Methods "GET,PUT,POST,DELETE"
+        Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Custom-Header,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,C$" Upgrade-Insecure-Requests
+        Header always set Access-Control-Allow-Credentials true
+        Access-Control-Max-Age: 1728000
+
+        ## Always set Secure Cookies
+        Header always edit Set-Cookie (.*) "$1, Secure; httponly"
+  
+        Header set X-Content-Type-Options "nosniff"
+        Header set X-XSS-Protection "1; mode=block"
+        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
+        Header set X-Frame-Options "SAMEORIGIN"
+        Header set X-Permitted-Cross-Domain-Policies "none"
+	      Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Header always set Expect-CT "enforce, max-age=0"
+
+        Header set Timing-Allow-Origin: "*"
+        
+        # FileETag None is not enough for every server.
+        Header unset ETag
+        # Since we`re sending far-future expires, we don't need ETags for static content.
+        # developer.yahoo.com/performance/rules.html#etags
+        FileETag None
+        
+
+
+  
+</IfModule>
+
+
+# --------------------------------
+# Block specific files from being accessed directly
+# --------------------------------
+<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh)$">
+    Require all denied
+</FilesMatch>
+
+
+<IfModule mod_setenvif.c>
+  <IfModule mod_headers.c>
+    <FilesMatch "\.(bmp|cur|gif|ico|jpe?g|a?png|svgz?|webp|heic|heif|avif)$">
+      SetEnvIf Origin ":" IS_CORS
+      Header set Access-Control-Allow-Origin "*" env=*IS_CORS*
+    </FilesMatch>
+  </IfModule>
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(eot|otf|tt[cf]|woff2?)$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+</IfModule>
+<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh)$">
+        Require all denied
+</FilesMatch>
+
+<Files robots.txt>
+        Require all granted
+</Files>
+
+<Files ads.txt>
+        Require all granted
+</Files>
+</IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{HTTPS} =on
+  RewriteRule ^ - [E=PROTO:https]
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ - [E=PROTO:http]
+
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ %{ENV:PROTO}://%1%{REQUEST_URI} [R=301,L]
+</IfModule>
+## WP Defender - End ##
+
+# --------------------------------
+# Redirect invalid requests to a custom error page
+# --------------------------------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^.*$ /error.html [L]
