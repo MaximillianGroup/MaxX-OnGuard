@@ -6,6 +6,13 @@
     # Disable server signature to prevent information disclosure
     ServerSignature Off
 
+    # Set the timezone of the server
+    # Set PHP timezone for Apache
+    php_value date.timezone "UTC"
+    # For non-PHP applications
+    # Set server timezone environment variable
+    SetEnv TZ "UTC"
+
     # Protect against DOS attacks by limiting file upload size (10MB)
     LimitRequestBody 10240000
 
