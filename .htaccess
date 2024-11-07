@@ -1,3 +1,10 @@
+# Apache Configuration File for WordPress (multisite) or PHP Application
+# Author: MaximillianGroup (Max Barrett) <maximilliangroup@gmail.com>
+# Version 1.0.0
+# WordPress and WordPress Multisite, Cloudflare Origin Certificates, Let's Encrypt, Strong SSL Security
+# Contact: support@maximilliangroup.us
+
+
 # -------------------------------
 # [CORE] Core settings
 # -------------------------------
@@ -13,24 +20,28 @@
     # Set server timezone environment variable
     SetEnv TZ "UTC"
 
-    # Protect against DOS attacks by limiting file upload size (10MB)
-    LimitRequestBody 10240000
+    # Disable directory listing and unnecessary multi-view handling for security
+    Options +FollowSymLinks -Indexes -MultiViews 
 
     # Secure directory by disabling script execution for certain file types
     AddHandler cgi-script .php .pl .py .jsp .asp .htm .shtml .sh .cgi
     Options -ExecCGI
 
-    # Disable directory listing and unnecessary multi-view handling for security
-    Options +FollowSymLinks -Indexes -MultiViews
-   
+    # DirectoryIndex: sets the file that Apache will serve if a directory is requested.
+    DirectoryIndex index.html index.php /index.php 
+
+    # Protect against DOS attacks by limiting file upload size (10MB)
+    LimitRequestBody 10240000
+
+    # DefaultType: the default MIME type the server will use for a document.
+    DefaultType text/html
+    
 </IfModule>
 
-
-# 8G FIREWALL v1.3 20240222
+# -------------------------------
+# [8G FIREWALL] v1.3 20240222
 # https://perishablepress.com/8g-firewall/
-
-# 8G:[CORE]
-
+# -------------------------------
 # 8G:[USER AGENT]
 <IfModule mod_rewrite.c>
 
@@ -103,6 +114,15 @@
 # [GZIP] GZIP Compression
 # --------------------------------
 <IfModule mod_deflate.c>
+
+   # AddEncoding allows you to have certain browsers uncompress information on the fly. Note: Not all browsers support this.
+   AddEncoding x-compress .Z
+   AddEncoding x-gzip .gz .tgz
+
+   AddOutputFilterByType DEFLATE text/html text/plain text/xml application/xml application/xhtml+xml text/javascript text/css application/x-javascript
+   BrowserMatch ^Mozilla/4 gzip-only-text/html
+   BrowserMatch ^Mozilla/4\.0[678] no-gzip
+   BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
     
     # Force deflate for mangled headers
     # developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping/
@@ -194,10 +214,8 @@
 </IfModule>
 
 # -------------------------------------------
-# [HTTPS REWRITE]
+# [HTTPS REWRITE] - HTTPS ALWAYS and ONLY
 # -------------------------------------------
-
-# HTTPS ALWAYS and ONLY
 </IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -211,10 +229,15 @@
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ %{ENV:PROTO}://%1%{REQUEST_URI} [R=301,L]
 
-  # Redirect www to non-www with HTTPS enforced
-  RewriteCond %{HTTPS} !=on
-  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-  RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+  # Rewrite to www dynamically
+  RewriteCond %{REQUEST_URI} !^/robots\.txt$ [NC]
+  RewriteCond %{HTTP_HOST} !^www\.[a-z-]+\.[a-z]{2,6} [NC]
+  RewriteCond %{HTTP_HOST} ([a-z-]+\.[a-z]{2,6})$   [NC]
+  RewriteRule ^/(.*)$ https://%1/$1 [R=301,L]
+
+  ## DENY REQUEST BASED ON REQUEST METHOD
+  RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|HEAD)$ [NC]
+  RewriteRule ^.*$ - [F]
 
   # [SPELLCHECK] OPTIONAL - Enable automatic spelling correction for URLs
     <IfModule mod_speling.c>
@@ -224,86 +247,64 @@
 </IfModule>
 
 # -------------------------------------------
-# [APP REWRITE] WordPress Multisite and other Application Rewrites
+# [REWRITES] WordPress Multisite and other Application Rewrites
 # -------------------------------------------
-<IfModules mod_rewrites.c>
-	RewriteEngine On
-	
-	# Authorization Headers 
-	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-	RewriteBase /
 
-	# ALL WORDPRESS require next four (4) rewrites
-	RewriteRule ^index\.php$ - [L]
+# --- WORDPRESS STANDARD ---
+# BEGIN WordPress
+	<IfModule mod_rewrite.c>
+	    RewriteEngine On
+	    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	    RewriteBase /  # Or adjust to your WordPress subdirectory if applicable
+	    RewriteRule ^index\.php$ - [L]
+	    RewriteCond %{REQUEST_FILENAME} !-f
+	    RewriteCond %{REQUEST_FILENAME} !-d
+	    RewriteRule . /index.php [L]  # Or adjust path if in a subdirectory
+	</IfModule>
+# END WordPress
+
+# --- WORDPRESS MULTISITE SUBFOLDER --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
+# BEGIN WordPress Multisite
+    <IfModule mod_rewrite.c>
+	#RewriteEngine On
+	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	#RewriteBase /
+	#RewriteRule ^index\.php$ - [L]
 	
 	# add a trailing slash to /wp-admin
-	RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+	#RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
 	
-	RewriteCond %{REQUEST_FILENAME} -f [OR]
-	RewriteCond %{REQUEST_FILENAME} -d
-
-	# OPTIONS - uncomment your option
-	
-	# WORDPRESS STANDARD INSTALLATION  (adjust paths if necessary)
+	#RewriteCond %{REQUEST_FILENAME} -f [OR]
+	#RewriteCond %{REQUEST_FILENAME} -d
+	#RewriteRule ^ - [L]
 	#RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
 	#RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
 	#RewriteRule . index.php [L]
+    </IfModule>
+# END WordPress Multisite
 
-	        # (OPTIONAL) ADDED WORDPRESS SECURITY
-		#RewriteRule ^wp-admin/includes/ - [F,L]  # Protect wp-admin includes
-		#RewriteRule !^wp-includes/ - [S=3]
-		#RewriteRule ^wp-includes/[^/]+\.php$ - [L] 
-		#RewriteRule ^wp-includes/js/tinymce/langs/.+\.php - [L]
-		#RewriteRule ^wp-includes/theme-compat/ - [L]
+# --- WORDPRESS MULTISITE SUBDOMAIN --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
+# BEGIN WordPress Multisite
+    #<IfModule mod_rewrite.c>
+	#RewriteEngine On
+	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	#RewriteBase /
+	#RewriteRule ^index\.php$ - [L]
 	
-		# WORDPRESS SINGLE-SITE *SPECIAL* INSTALLATIONS (Adjust path and domain/subdomain)
-
-		    # --- WordPress in a subdirectory ---
-		    ##RewriteCond %{REQUEST_URI} ^/subdirectory #adjust path
-		    #RewriteCond %{REQUEST_FILENAME} !-f
-		    #RewriteCond %{REQUEST_FILENAME} !-d
-		    #RewriteRule ^ /subdirectory/index.php [L]  #adjust path
-		    
-		    # --- WordPress on a subdomain ---
-		    #RewriteCond %{HTTP_HOST} ^subdomain\.domain\.com$ [NC] #adjust path
-		    #RewriteCond %{REQUEST_FILENAME} !-f
-		    #RewriteCond %{REQUEST_FILENAME} !-d
-		    #RewriteRule ^ /path/to/wordpress/index.php [L] #adjust path
+	# add a trailing slash to /wp-admin
+	#RewriteRule ^wp-admin$ wp-admin/ [R=301,L]
 	
-	# WORDPRESS MULTISITE (Choose ONE and uncomment as needed)
-	
-	    # --- SUBDOMAIN MULTISITE ---
-	    #  (If using subdomains, uncomment this section and adjust domain)
-	    #RewriteCond %{HTTP_HOST} ^([^.]+)\.domain\.com$ [NC] #adjust path
-	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
-	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
-	    #RewriteRule . index.php [L]
-	    
-	    # --- SUBDIRECTORY MULTISITE ---
-	    # (If using subdirectories, uncomment this section)
-	    #RewriteRule ^ - [L]
-	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
-	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
-	    #RewriteRule . index.php [L]
-	
-	# LARAVEL APPLICATIONS (Adjust path and domain/subdomain)
-	
-	    # --- SUBDOMAIN ---
-	    #RewriteCond %{HTTP_HOST} ^subdomain\.domain\.com$ [NC] #adjust path
-	    #RewriteCond %{REQUEST_FILENAME} !-f
-	    #RewriteCond %{REQUEST_FILENAME} !-d
-	    #RewriteRule ^ /path/to/laravel/public/index.php [L] #adjust path
-	    
-	    # --- SUBDIRECTORY ---
-	    #RewriteCond %{REQUEST_URI} ^/laravel
-	    #RewriteCond %{REQUEST_FILENAME} !-f
-	    #RewriteCond %{REQUEST_FILENAME} !-d
-	    #RewriteRule ^ /path/to/laravel/public/index.php [L] #adjust path
-
-</IfModules>
+	#RewriteCond %{REQUEST_FILENAME} -f [OR]
+	#RewriteCond %{REQUEST_FILENAME} -d
+	#RewriteRule ^ - [L]
+	#RewriteRule ^(wp-(content|admin|includes).*) $1 [L]
+	#RewriteRule ^(.*\.php)$ $1 [L]
+	#RewriteRule . index.php [L]
+    <IfModule>
+# END WordPress Multisite
 
 # --------------------------------
-# [SECURITY REWRITE] Final Security Rewrites
+# [SECURITY REWRITE] - Final Security Rewrites
 # --------------------------------
 <IfModule mod_rewrite.c>
 
@@ -311,6 +312,7 @@
 	RewriteEngine On
 	RewriteCond %{REQUEST_FILENAME}.php -f
 	RewriteRule ^(.+)$ $1.php [L]
+
 
 	# Redirect invalid requests to a custom error page
 	RewriteCond %{REQUEST_FILENAME} !-f
@@ -320,20 +322,104 @@
 </IfModule>
 
 # --------------------------------
-# [FILE BLOCK] Block specific files from being accessed directly
+# [FILE BLOCK] - Block specific files from being accessed directly
 # --------------------------------
 <FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh|cgi)$">
-    Require all denied
+    Order Deny,Allow
+    Deny from All
+    Allow from env=REDIRECT_STATUS
+</FilesMatch>
+<FilesMatch "^(wp-config\.php|\.htaccess|\.htpasswd|debug\.log)$">
+  Order Deny,Allow
+  Deny from All
+  Allow from env=REDIRECT_STATUS
 </FilesMatch>
 
+# Denies obvious trackback spam. See Holy Shmoly!
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP_USER_AGENT} ^.*(opera|mozilla|firefox|msie|safari).*$ [NC]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.+/trackback/?\ HTTP/ [NC]
+RewriteRule .? - [F,NS,L]
+
+
+# Denies any comment attempt with a blank HTTP_REFERER field, highly indicative of spam. May prevent some visitors from POSTING.
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
+RewriteCond %{HTTP_REFERER} ^-?$
+RewriteRule .? - [F,NS,L]
+
+# Denies POST requests by blank user-agents. May prevent a small number of visitors from POSTING.
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP_USER_AGENT} ^-?$
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteRule .? - [F,NS,L]
+
+# Denies obvious exploit using bogus graphics
+RewriteCond %{HTTP:Content-Disposition} \.php [NC]
+RewriteCond %{HTTP:Content-Type} image/.+ [NC]
+RewriteRule .? - [F,NS,L]
+
+# Denies requests that dont contain a HTTP HOST Header.
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteCond %{HTTP_HOST} ^$
+RewriteRule .? - [F,NS,L]
+
+Denies any POST request with a content type other than application/x-www-form-urlencoded|multipart/form-data
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP:Content-Type} !^(application/x-www-form-urlencoded|multipart/form-data.*(boundary.*)?)$ [NC]
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteRule .? - [F,NS,L]
+
+# Denies any POST request that doesnt have a Content-Length Header
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP:Content-Length} ^$
+RewriteCond %{REQUEST_URI} !^/(wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteRule .? - [F,NS,L]
+
+# Denies any request for a url containing characters other than "a-zA-Z0-9.+/-?=&" 
+# REALLY helps but may break your site depending on your links.
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteCond %{THE_REQUEST} !^[A-Z]{3,9}\ [a-zA-Z0-9\.\+_/\-\?\=\&]+\ HTTP/ [NC]
+RewriteRule .? - [F,NS,L]
+
+# Block common exploit requests with 403 Forbidden. These can help alot, may break some plugins.
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ ///.*\ HTTP/ [NC,OR]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\=?(http|ftp|ssl|https):/.*\ HTTP/ [NC,OR]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\?.*\ HTTP/ [NC,OR]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(asp|ini|dll).*\ HTTP/ [NC,OR]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(htpasswd|htaccess|aahtpasswd).*\ HTTP/ [NC]
+RewriteRule .? - [F,NS,L]
+
+# Denies any POST attempt made to a non-existing wp-comments-post.php
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
+RewriteRule .? - [F,NS,L]
+
+### ALTERNATATIVE TO USING ERRORDOCUMENT
+# https://www.htaccesselite.com/d/htaccess-errordocument-examples-vt11.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^.*$ /error.php [L]
+
 # --------------------------------
-# [HEADERS] Headers
+# [HEADERS] 
 # --------------------------------
 <IfModule mod_headers.c>
+	Header set Content-Language "en-US"
+
+	# Reinforce file type and charset
+	AddDefaultCharset UTF-8
+	AddType 'text/html; charset=UTF-8' .html
+	AddCharset UTF-8 .html .php
 
         # remove server information for security protection
         Header unset Server	
-
+	# remove other headers which indicate plugins
+	Header always unset WP-Super-Cache
+	
+	# XMLRPC Pingback
+	Header always unset X-Pingback
+	Header set X-Pingback "https://example.com/xmlrpc.php"
+	
         # Content Security policy and Feature Policy
         Header always set Content-Security-Policy "default-src 'self'"
         # OR
