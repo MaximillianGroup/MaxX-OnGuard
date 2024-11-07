@@ -20,62 +20,11 @@
     AddHandler cgi-script .php .pl .py .jsp .asp .htm .shtml .sh .cgi
     Options -ExecCGI
 
-    # Enable automatic spelling correction for URLs
-    <IfModule mod_speling.c>
-        CheckSpelling On
-    </IfModule>
-
-    RewriteEngine On
     # Disable directory listing and unnecessary multi-view handling for security
     Options +FollowSymLinks -Indexes -MultiViews
-    RewriteBase /
-
-    # Redirect www to non-www with HTTPS enforced
-    RewriteCond %{HTTPS} !=on
-    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-    RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
-
-    # Hide php extention
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME}.php -f
-    RewriteRule ^(.+)$ $1.php [L]
+   
 </IfModule>
 
-# --------------------------------
-# Enable GZIP compression for content
-# --------------------------------
-<IfModule mod_deflate.c>
-    
-    # Force deflate for mangled headers
-    # developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping/
-    <IfModule mod_setenvif.c>
-        <IfModule mod_headers.c>
-            SetEnvIfNoCase ^(Accept-EncodXng|X-cept-Encoding|X{15}|~{15}|-{15})$ ^((gzip|deflate)\s*,?\s*)+|[X~-]{4,13}$ HAVE_Accept-Encoding
-            RequestHeader append Accept-Encoding "gzip,deflate" env=HAVE_Accept-Encoding
-        </IfModule>
-    </IfModule>
-</IfModule>
-
-<IfModule filter_module>
-    FilterDeclare COMPRESS
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/html
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/css
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/plain
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/x-component
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/javascript
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/json
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xhtml+xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/rss+xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/atom+xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/vnd.ms-fontobject
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $image/svg+xml
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/x-font-ttf
-    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $font/opentype
-    FilterChain COMPRESS
-    FilterProtocol COMPRESS DEFLATE change=yes;byteranges=no
-</IfModule>
 
 # 8G FIREWALL v1.3 20240222
 # https://perishablepress.com/8g-firewall/
@@ -151,97 +100,45 @@
 </IfModule>
 
 # --------------------------------
-# MIME Types and Charset settings
+# [GZIP] GZIP Compression
 # --------------------------------
+<IfModule mod_deflate.c>
     
-# Set custom MIME types for various file extensions
-# You can remove the mime types you do not need
-<IfModule mod_mime.c>
-  # Data interchange
-    AddType application/atom+xml      atom
-    AddType application/json          json map topojson
-    AddType application/ld+json       jsonld
-    AddType application/rss+xml       rss
-    AddType application/geo+json      geojson
-    AddType application/rdf+xml       rdf
-    AddType application/xml           xml
-  # JavaScript
-    AddType text/javascript               js mjs
-  # Manifest files
-    AddType application/manifest+json     webmanifest
-    AddType application/x-web-app-manifest+json         webapp
-    AddType text/cache-manifest           appcache
-  # Media files
-    AddType audio/mp4                     f4a f4b m4a 
-    AddType audio/flac                    flac
-    AddType audio/acc                     acc
-    AddType audio/webm                    weba
-    AddType video/webm                    webm
-    AddType application/vnd.apple.mpegurl m3u8
-    AddType audio/mpegurl                 m3u8
-    AddType application/x-mpegURL         m3u8
-    AddType video/MP2T                    ts
-    AddType audio/ogg                     oga ogg opus
-    AddType image/bmp                     bmp
-    AddType image/svg+xml                 svg svgz
-    AddType image/webp                    webp
-    AddType video/mp4                     f4v f4p m4v mp4
-    AddType video/ogg                     ogv
-    AddType video/webm                    webm
-    AddType image/x-icon                  cur ico
-  # HEIF Images
-    AddType image/heic                    heic
-    AddType image/heif                    heif
-  # HEIF Image Sequence
-    AddType image/heics                   heics
-    AddType image/heifs                   heifs
-  # AVIF Images
-    AddType image/avif                    avif
-  # AVIF Image Sequence
-    AddType image/avis                    avis
-  # WebAssembly
-    AddType application/wasm              wasm
-  # Web fonts
-    AddType font/woff                         woff
-    AddType font/woff2                        woff2
-    AddType application/vnd.ms-fontobject     eot
-    AddType font/ttf                          ttf
-    AddType font/collection                   ttc
-    AddType font/otf                          otf
-  # Other
-    AddType application/octet-stream          safariextz
-    AddType application/x-bb-appworld         bbaw
-    AddType application/x-chrome-extension    crx
-    AddType application/x-opera-extension     oex
-    AddType application/x-xpinstall           xpi
-    AddType text/calendar                     ics
-    AddType text/markdown                     markdown md
-    AddType text/vcard                        vcard vcf
-    AddType text/vnd.rim.location.xloc        xloc
-    AddType text/vtt                          vtt
-    AddType text/x-component                  htc
-    # Default Charset
-    AddDefaultCharset utf-8
-    AddCharset utf-8 .appcache \
-    .bbaw \
-    .css \
-    .htc \
-    .ics \
-    .js \
-    .json \
-    .manifest \
-    .map \
-    .markdown \
-    .md \
-    .mjs \
-    .topojson \
-    .vtt \
-    .vcard \
-    .vcf \
-    .webmanifest \
-    .xloc
+    # Force deflate for mangled headers
+    # developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping/
+    <IfModule mod_setenvif.c>
+	<IfModule mod_headers.c>
+	    SetEnvIfNoCase ^(Accept-EncodXng|X-cept-Encoding|X{15}|~{15}|-{15})$ ^((gzip|deflate)\s*,?\s*)+|[X~-]{4,13}$ HAVE_Accept-Encoding
+	    RequestHeader append Accept-Encoding "gzip,deflate" env=HAVE_Accept-Encoding
+	</IfModule>
+    </IfModule>
+
+
+	<IfModule filter_module>
+	    FilterDeclare COMPRESS
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/html
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/css
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/plain
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/x-component
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/javascript
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/json
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xhtml+xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/rss+xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/atom+xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/vnd.ms-fontobject
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $image/svg+xml
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/x-font-ttf
+	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $font/opentype
+	    FilterChain COMPRESS
+	    FilterProtocol COMPRESS DEFLATE change=yes;byteranges=no
+	</IfModule>
 </IfModule>
-<IfModule mod_rewrite.c>
+
+# -------------------------------------------
+# [CACHE] Caching
+# -------------------------------------------
 <IfModule mod_expires.c>
   ExpiresActive on
 
@@ -279,155 +176,33 @@
   ExpiresByType text/x-component          "access plus 1 month"
 
 # Webfonts
-  ExpiresByType font/truetype             "access plus 1 month"
-  ExpiresByType font/opentype             "access plus 1 month"
-  ExpiresByType application/x-font-woff   "access plus 1 month"
-  ExpiresByType image/svg+xml             "access plus 1 month"
-  ExpiresByType application/vnd.ms-fontobject "access plus 1 month"
+  ExpiresByType font/truetype             "access plus 1 year"
+  ExpiresByType font/opentype             "access plus 1 year"
+  ExpiresByType application/x-font-woff   "access plus 1 year"
+  ExpiresByType image/svg+xml             "access plus 1 year"
+  ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
 
 # CSS and JavaScript
-  ExpiresByType text/css                  "access plus 1 year"
-  ExpiresByType application/javascript    "access plus 1 year"
-  ExpiresByType text/javascript           "access plus 1 year"
+  ExpiresByType text/css                  "access plus 1 month"
+  ExpiresByType application/javascript    "access plus 1 month"
+  ExpiresByType text/javascript           "access plus 1 month"
 
   <IfModule mod_headers.c>
     Header append Cache-Control "public"
   </IfModule>
 
 </IfModule>
-# BEGIN Disable Directory Browsing
-    
-# END Disable Directory Browsing
-RewriteEngine On
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-RewriteBase /
-RewriteRule ^index\.php$ - [L]
 
-# add a trailing slash to /wp-admin
-RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+# -------------------------------------------
+# [HTTPS REWRITE]
+# -------------------------------------------
 
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
-RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
-#RewriteRule . index.php [L]
-</IfModule>
-
-  
-# --------------------------------
-# Enable HTTP Security Headers
-# --------------------------------
-<IfModule mod_headers.c>
-        # remove server information for security protection
-        Header unset Server
-
-        #Header set Sec-Fetch-Dest document
-	      #Header set Sec-Fetch-Mode navigate
-	      #Header set Sec-Fetch-Site cross-site
-	      #Header set Sec-Fetch-User ?1	
-
-        # Content Security policy and Feature Policy
-        Header always set Content-Security-Policy "default-src 'self'"
-        # OR
-        #Header set Content-Security-Policy "default-src * data:; script-src https: 'unsafe-inline' 'unsafe-eval'; style-src https: 'unsafe-inline'"
-  
-        #Header set Feature-Policy "camera 'none'; fullscreen 'self'; geolocation *; microphone 'none'; autoplay *"
-
-        # -------
-        #  CORS 
-        # -------
-        <IfModules mod_rewrite.c>
-          ## Handling Options for the CORS
-          ## Allows for Pre-check to setup CORS requests
-          RewriteCond %{REQUEST_METHOD} OPTIONS
-          RewriteRule ^(.*)$ $1 [L,R=204]
-
-        <IfModules>
-        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
-	      Header always set Expect-CT "enforce, max-age=0"
-        
-	      #Header set Cross-Origin-Embedder-Policy: require-corp; report-to="https://domain.com/reports/"
-	      #Header set Cross-Origin-Opener-Policy: unsafe-none; report-to="https://domain.com/reports/"
-
-
-        ## Enable Cors 
-        # Option 1
-	         Header add Access-Control-Allow-Origin "*" 
-
-        # Option 2 
-           # Capture the current request's origin domain dynamically
-           SetEnvIf Origin "^https?://(.*)$" OriginHeader=$0
-    
-           # Apply Access-Control-Allow-Origin dynamically based on the Origin header
-           Header always set Access-Control-Allow-Origin %{OriginHeader}e env=OriginHeader
-
-        # Specify the CORS Headers
-        Header set Access-Control-Allow-Methods "GET,PUT,POST,DELETE"
-        Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Custom-Header,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,C$" Upgrade-Insecure-Requests
-        Header always set Access-Control-Allow-Credentials true
-        Access-Control-Max-Age: 1728000
-
-        ## Always set Secure Cookies
-        Header always edit Set-Cookie (.*) "$1, Secure; httponly"
-  
-        Header set X-Content-Type-Options "nosniff"
-        Header set X-XSS-Protection "1; mode=block"
-        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
-        Header set X-Frame-Options "SAMEORIGIN"
-        Header set X-Permitted-Cross-Domain-Policies "none"
-	      Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Header always set Expect-CT "enforce, max-age=0"
-
-        Header set Timing-Allow-Origin: "*"
-        
-        # FileETag None is not enough for every server.
-        Header unset ETag
-        # Since we`re sending far-future expires, we don't need ETags for static content.
-        # developer.yahoo.com/performance/rules.html#etags
-        FileETag None
-        
-
-
-  
-</IfModule>
-
-
-# --------------------------------
-# Block specific files from being accessed directly
-# --------------------------------
-<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh)$">
-    Require all denied
-</FilesMatch>
-
-
-<IfModule mod_setenvif.c>
-  <IfModule mod_headers.c>
-    <FilesMatch "\.(bmp|cur|gif|ico|jpe?g|a?png|svgz?|webp|heic|heif|avif)$">
-      SetEnvIf Origin ":" IS_CORS
-      Header set Access-Control-Allow-Origin "*" env=*IS_CORS*
-    </FilesMatch>
-  </IfModule>
-</IfModule>
-<IfModule mod_headers.c>
-  <FilesMatch "\.(eot|otf|tt[cf]|woff2?)$">
-    Header set Access-Control-Allow-Origin "*"
-  </FilesMatch>
-</IfModule>
-<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh)$">
-        Require all denied
-</FilesMatch>
-
-<Files robots.txt>
-        Require all granted
-</Files>
-
-<Files ads.txt>
-        Require all granted
-</Files>
+# HTTPS ALWAYS and ONLY
 </IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Proxy server calls especially
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [E=PROTO:https]
   RewriteCond %{HTTPS} !=on
@@ -435,12 +210,226 @@ RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
 
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ %{ENV:PROTO}://%1%{REQUEST_URI} [R=301,L]
+
+  # Redirect www to non-www with HTTPS enforced
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+  # [SPELLCHECK] OPTIONAL - Enable automatic spelling correction for URLs
+    <IfModule mod_speling.c>
+        CheckSpelling On
+    </IfModule>
+	
 </IfModule>
-## WP Defender - End ##
+
+# -------------------------------------------
+# [APP REWRITE] WordPress Multisite and other Application Rewrites
+# -------------------------------------------
+<IfModules mod_rewrites.c>
+	RewriteEngine On
+	
+	# Authorization Headers 
+	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	RewriteBase /
+
+	# ALL WORDPRESS require next four (4) rewrites
+	RewriteRule ^index\.php$ - [L]
+	
+	# add a trailing slash to /wp-admin
+	RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+	
+	RewriteCond %{REQUEST_FILENAME} -f [OR]
+	RewriteCond %{REQUEST_FILENAME} -d
+
+	# OPTIONS - uncomment your option
+	
+	# WORDPRESS STANDARD INSTALLATION  (adjust paths if necessary)
+	#RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+	#RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+	#RewriteRule . index.php [L]
+
+	        # (OPTIONAL) ADDED WORDPRESS SECURITY
+		#RewriteRule ^wp-admin/includes/ - [F,L]  # Protect wp-admin includes
+		#RewriteRule !^wp-includes/ - [S=3]
+		#RewriteRule ^wp-includes/[^/]+\.php$ - [L] 
+		#RewriteRule ^wp-includes/js/tinymce/langs/.+\.php - [L]
+		#RewriteRule ^wp-includes/theme-compat/ - [L]
+	
+		# WORDPRESS SINGLE-SITE *SPECIAL* INSTALLATIONS (Adjust path and domain/subdomain)
+
+		    # --- WordPress in a subdirectory ---
+		    ##RewriteCond %{REQUEST_URI} ^/subdirectory #adjust path
+		    #RewriteCond %{REQUEST_FILENAME} !-f
+		    #RewriteCond %{REQUEST_FILENAME} !-d
+		    #RewriteRule ^ /subdirectory/index.php [L]  #adjust path
+		    
+		    # --- WordPress on a subdomain ---
+		    #RewriteCond %{HTTP_HOST} ^subdomain\.domain\.com$ [NC] #adjust path
+		    #RewriteCond %{REQUEST_FILENAME} !-f
+		    #RewriteCond %{REQUEST_FILENAME} !-d
+		    #RewriteRule ^ /path/to/wordpress/index.php [L] #adjust path
+	
+	# WORDPRESS MULTISITE (Choose ONE and uncomment as needed)
+	
+	    # --- SUBDOMAIN MULTISITE ---
+	    #  (If using subdomains, uncomment this section and adjust domain)
+	    #RewriteCond %{HTTP_HOST} ^([^.]+)\.domain\.com$ [NC] #adjust path
+	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+	    #RewriteRule . index.php [L]
+	    
+	    # --- SUBDIRECTORY MULTISITE ---
+	    # (If using subdirectories, uncomment this section)
+	    #RewriteRule ^ - [L]
+	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+	    #RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+	    #RewriteRule . index.php [L]
+	
+	# LARAVEL APPLICATIONS (Adjust path and domain/subdomain)
+	
+	    # --- SUBDOMAIN ---
+	    #RewriteCond %{HTTP_HOST} ^subdomain\.domain\.com$ [NC] #adjust path
+	    #RewriteCond %{REQUEST_FILENAME} !-f
+	    #RewriteCond %{REQUEST_FILENAME} !-d
+	    #RewriteRule ^ /path/to/laravel/public/index.php [L] #adjust path
+	    
+	    # --- SUBDIRECTORY ---
+	    #RewriteCond %{REQUEST_URI} ^/laravel
+	    #RewriteCond %{REQUEST_FILENAME} !-f
+	    #RewriteCond %{REQUEST_FILENAME} !-d
+	    #RewriteRule ^ /path/to/laravel/public/index.php [L] #adjust path
+
+</IfModules>
 
 # --------------------------------
-# Redirect invalid requests to a custom error page
+# [SECURITY REWRITE] Final Security Rewrites
 # --------------------------------
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^.*$ /error.html [L]
+<IfModule mod_rewrite.c>
+
+	# Hide php extention
+	RewriteEngine On
+	RewriteCond %{REQUEST_FILENAME}.php -f
+	RewriteRule ^(.+)$ $1.php [L]
+
+	# Redirect invalid requests to a custom error page
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteRule ^.*$ /error.html [L
+
+</IfModule>
+
+# --------------------------------
+# [FILE BLOCK] Block specific files from being accessed directly
+# --------------------------------
+<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh|cgi)$">
+    Require all denied
+</FilesMatch>
+
+# --------------------------------
+# [HEADERS] Headers
+# --------------------------------
+<IfModule mod_headers.c>
+
+        # remove server information for security protection
+        Header unset Server	
+
+        # Content Security policy and Feature Policy
+        Header always set Content-Security-Policy "default-src 'self'"
+        # OR
+        #Header set Content-Security-Policy "default-src * data:; script-src https: 'unsafe-inline' 'unsafe-eval'; style-src https: 'unsafe-inline'"
+  
+        #Header set Feature-Policy "camera '*'; fullscreen '*'; geolocation *; microphone '*'; autoplay *"
+
+        # --------------------------------
+	# [CORS]
+	# --------------------------------
+	# OPTIONS Enable Cors - uncomment one option
+
+        # OPTION 1
+	Header add Access-Control-Allow-Origin "*" 
+
+        # OPTION 2 
+        # Capture the current request's origin domain dynamically
+	<IfModule mod_setenvif.c>
+
+        	SetEnvIf Origin "^https?://(.*)$" OriginHeader=$0
+    
+	        # Apply Access-Control-Allow-Origin dynamically based on the Origin header
+	        Header always set Access-Control-Allow-Origin %{OriginHeader}e env=OriginHeader
+
+		# There is a security reason for this I forgot from Mozilla
+		<FilesMatch "\.(bmp|cur|gif|ico|jpe?g|a?png|svgz?|webp|heic|heif|avif)$">
+		   SetEnvIf Origin ":" IS_CORS
+		   Header set Access-Control-Allow-Origin "*" env=*IS_CORS*
+		</FilesMatch>
+	</IfModule>
+
+	## Pre-check Handling Options for the CORS
+        <IfModules mod_rewrite.c>
+
+          ## Allows for Pre-check to setup CORS requests
+          RewriteCond %{REQUEST_METHOD} OPTIONS
+          RewriteRule ^(.*)$ $1 [L,R=204]
+        <IfModules>
+
+	# Specify the CORS Headers
+        Header set Access-Control-Allow-Methods "GET,PUT,POST,OPTIONS" # Add DELETE if needed
+        Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Custom-Header,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,C$" Upgrade-Insecure-Requests
+        Header always set Access-Control-Allow-Credentials true
+        Access-Control-Max-Age: 1728000
+
+	Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+        ## Always set Secure Cookies
+        Header always edit Set-Cookie (.*) "$1, Secure; httponly"
+
+        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
+	Header always set Expect-CT "enforce, max-age=0"
+
+	# Allow timing
+ 	Header set Timing-Allow-Origin: "*"
+      
+  	# Set Security Headers
+        Header set X-Content-Type-Options "nosniff"
+        Header set X-XSS-Protection "1; mode=block"
+        Header set Referrer-Policy "no-referrer, strict-origin-when-cross-origin"
+        Header set X-Frame-Options "SAMEORIGIN"
+        Header set X-Permitted-Cross-Domain-Policies "none"
+
+	# For fonts set any origin
+	<FilesMatch "\.(eot|otf|tt[cf]|woff2?)$">
+	  Header set Access-Control-Allow-Origin "*"
+	</FilesMatch>
+	
+	Header always set Expect-CT "enforce, max-age=0"
+        # FileETag None is not enough for every server.
+        Header unset ETag
+        # Since we`re sending far-future expires, we don't need ETags for static content.
+        # developer.yahoo.com/performance/rules.html#etags
+        FileETag None
+
+	# --------------------------------
+	# COOP and COEP - independent of eachother, can be tested and deployed separately.
+	# --------------------------------
+	# "When set together on a top-level document, COEP and COOP ensure that neither the document
+	# nor any of its descendents can load resources which haven't opted in, and that navigations 
+	# to any top-level document that doesn't both come from the same origin and set COEP will be 
+	# performed in a new browsing context group (and consequently, different process)."
+	# CITE - https://docs.google.com/document/d/1zDlfvfTJ_9e8Jdc8ehuV4zMEu9ySMCiTGMS9y0GU92k/edit?pli=1&tab=t.0
+	# READ - https://resourcepolicy.fyi/
+
+	# [COOP]
+	# See Mozilla  - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy
+	#Header set Cross-Origin-Opener-Policy: same-origin-allow-popups; report-to="https://domain.com/reports/"
+	
+	# [COEP]
+	# See Mozilla - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy
+	#Header set Cross-Origin-Embedder-Policy: require-corp; report-to="https://domain.com/reports/"
+
+	# Developers can detect whether the headers are set correctly and they are in a COOP plus COEP 
+	# environment through the self.crossOriginIsolated API.
+  
+</IfModule>
+
+# END
