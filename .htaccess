@@ -12,13 +12,12 @@
     
     # Disable server signature to prevent information disclosure
     ServerSignature Off
-
-    # Set the timezone of the server
-    # Set PHP timezone for Apache
-    php_value date.timezone "UTC"
+  
     # For non-PHP applications
     # Set server timezone environment variable
-    SetEnv TZ "UTC"
+    <IfModule mod_setenv.c>
+        SetEnv TZ "UTC"
+    </IfModule>
 
     # Disable directory listing and unnecessary multi-view handling for security
     Options +FollowSymLinks -Indexes -MultiViews 
@@ -32,6 +31,10 @@
 
     # Protect against DOS attacks by limiting file upload size (10MB)
     LimitRequestBody 10240000
+    # If audio / video increase to 100MB
+    <FilesMatch "\.(mp3|mp4|avi|acc|flac|wav|ogg)$">
+        LimitRequestBody 102400000
+    </FilesMatch>
 
     # DefaultType: the default MIME type the server will use for a document.
     DefaultType text/html
@@ -265,7 +268,7 @@
 
 # --- WORDPRESS MULTISITE SUBFOLDER --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
 # BEGIN WordPress Multisite
-    <IfModule mod_rewrite.c>
+#<IfModule mod_rewrite.c>
 	#RewriteEngine On
 	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 	#RewriteBase /
@@ -280,12 +283,12 @@
 	#RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
 	#RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
 	#RewriteRule . index.php [L]
-    </IfModule>
+#</IfModule>
 # END WordPress Multisite
 
 # --- WORDPRESS MULTISITE SUBDOMAIN --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
 # BEGIN WordPress Multisite
-    #<IfModule mod_rewrite.c>
+#<IfModule mod_rewrite.c>
 	#RewriteEngine On
 	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 	#RewriteBase /
@@ -300,9 +303,33 @@
 	#RewriteRule ^(wp-(content|admin|includes).*) $1 [L]
 	#RewriteRule ^(.*\.php)$ $1 [L]
 	#RewriteRule . index.php [L]
-    <IfModule>
+#<IfModule>
 # END WordPress Multisite
 
+# --------------------------------
+# [WEPP] - Image File Rewrites
+# --------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Check if browser supports WebP images
+  RewriteCond %{HTTP_ACCEPT} image/webp
+
+  # Check if WebP replacement image exists
+  RewriteCond %{DOCUMENT_ROOT}/$1.webp -f
+
+  # Serve WebP image instead
+  RewriteRule (.+)\.(jpe?g|png|gif)$ $1.webp [T=image/webp,E=REQUEST_image]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Vary: Accept for all the requests to jpeg, png, and gif
+  Header append Vary Accept env=REQUEST_image
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+</IfModule>
 # --------------------------------
 # [SECURITY REWRITE] - Final Security Rewrites
 # --------------------------------
@@ -313,18 +340,80 @@
 	RewriteCond %{REQUEST_FILENAME}.php -f
 	RewriteRule ^(.+)$ $1.php [L]
 
-
 	# Redirect invalid requests to a custom error page
 	RewriteCond %{REQUEST_FILENAME} !-f
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteRule ^.*$ /error.html [L
 
+	# Denies obvious trackback spam. See Holy Shmoly!
+	RewriteCond %{REQUEST_METHOD} =POST
+	RewriteCond %{HTTP_USER_AGENT} ^.*(opera|mozilla|firefox|msie|safari).*$ [NC]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.+/trackback/?\ HTTP/ [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies any comment attempt with a blank HTTP_REFERER field, highly indicative of spam. May prevent some visitors from POSTING.
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
+	RewriteCond %{HTTP_REFERER} ^-?$
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies POST requests by blank user-agents. May prevent a small number of visitors from POSTING.
+	RewriteCond %{REQUEST_METHOD} =POST
+	RewriteCond %{HTTP_USER_AGENT} ^-?$
+	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies obvious exploit using bogus graphics
+	RewriteCond %{HTTP:Content-Disposition} \.php [NC]
+	RewriteCond %{HTTP:Content-Type} image/.+ [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies requests that dont contain a HTTP HOST Header.
+	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteCond %{HTTP_HOST} ^$
+	RewriteRule .? - [F,NS,L]
+	
+	Denies any POST request with a content type other than application/x-www-form-urlencoded|multipart/form-data
+	RewriteCond %{REQUEST_METHOD} =POST
+	RewriteCond %{HTTP:Content-Type} !^(application/x-www-form-urlencoded|multipart/form-data.*(boundary.*)?)$ [NC]
+	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies any POST request that doesnt have a Content-Length Header
+	RewriteCond %{REQUEST_METHOD} =POST
+	RewriteCond %{HTTP:Content-Length} ^$
+	RewriteCond %{REQUEST_URI} !^/(wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies any request for a url containing characters other than "a-zA-Z0-9.+/-?=&" 
+	# REALLY helps but may break your site depending on your links.
+	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteCond %{THE_REQUEST} !^[A-Z]{3,9}\ [a-zA-Z0-9\.\+_/\-\?\=\&]+\ HTTP/ [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Block common exploit requests with 403 Forbidden. These can help alot, may break some plugins.
+	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ ///.*\ HTTP/ [NC,OR]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\=?(http|ftp|ssl|https):/.*\ HTTP/ [NC,OR]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\?.*\ HTTP/ [NC,OR]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(asp|ini|dll).*\ HTTP/ [NC,OR]
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(htpasswd|htaccess|aahtpasswd).*\ HTTP/ [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	# Denies any POST attempt made to a non-existing wp-comments-post.php
+	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
+	RewriteRule .? - [F,NS,L]
+	
+	### ALTERNATATIVE TO USING ERRORDOCUMENT
+	# https://www.htaccesselite.com/d/htaccess-errordocument-examples-vt11.html
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteRule ^.*$ /error.php [L]
 </IfModule>
 
 # --------------------------------
 # [FILE BLOCK] - Block specific files from being accessed directly
 # --------------------------------
-<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|log|sh|cgi)$">
+<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql|htaccess|htpasswd|ini|phps|fla|psd|sh|cgi)$">
     Order Deny,Allow
     Deny from All
     Allow from env=REDIRECT_STATUS
@@ -334,71 +423,6 @@
   Deny from All
   Allow from env=REDIRECT_STATUS
 </FilesMatch>
-
-# Denies obvious trackback spam. See Holy Shmoly!
-RewriteCond %{REQUEST_METHOD} =POST
-RewriteCond %{HTTP_USER_AGENT} ^.*(opera|mozilla|firefox|msie|safari).*$ [NC]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.+/trackback/?\ HTTP/ [NC]
-RewriteRule .? - [F,NS,L]
-
-
-# Denies any comment attempt with a blank HTTP_REFERER field, highly indicative of spam. May prevent some visitors from POSTING.
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
-RewriteCond %{HTTP_REFERER} ^-?$
-RewriteRule .? - [F,NS,L]
-
-# Denies POST requests by blank user-agents. May prevent a small number of visitors from POSTING.
-RewriteCond %{REQUEST_METHOD} =POST
-RewriteCond %{HTTP_USER_AGENT} ^-?$
-RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteRule .? - [F,NS,L]
-
-# Denies obvious exploit using bogus graphics
-RewriteCond %{HTTP:Content-Disposition} \.php [NC]
-RewriteCond %{HTTP:Content-Type} image/.+ [NC]
-RewriteRule .? - [F,NS,L]
-
-# Denies requests that dont contain a HTTP HOST Header.
-RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteCond %{HTTP_HOST} ^$
-RewriteRule .? - [F,NS,L]
-
-Denies any POST request with a content type other than application/x-www-form-urlencoded|multipart/form-data
-RewriteCond %{REQUEST_METHOD} =POST
-RewriteCond %{HTTP:Content-Type} !^(application/x-www-form-urlencoded|multipart/form-data.*(boundary.*)?)$ [NC]
-RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteRule .? - [F,NS,L]
-
-# Denies any POST request that doesnt have a Content-Length Header
-RewriteCond %{REQUEST_METHOD} =POST
-RewriteCond %{HTTP:Content-Length} ^$
-RewriteCond %{REQUEST_URI} !^/(wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteRule .? - [F,NS,L]
-
-# Denies any request for a url containing characters other than "a-zA-Z0-9.+/-?=&" 
-# REALLY helps but may break your site depending on your links.
-RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteCond %{THE_REQUEST} !^[A-Z]{3,9}\ [a-zA-Z0-9\.\+_/\-\?\=\&]+\ HTTP/ [NC]
-RewriteRule .? - [F,NS,L]
-
-# Block common exploit requests with 403 Forbidden. These can help alot, may break some plugins.
-RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ ///.*\ HTTP/ [NC,OR]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\=?(http|ftp|ssl|https):/.*\ HTTP/ [NC,OR]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\?.*\ HTTP/ [NC,OR]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(asp|ini|dll).*\ HTTP/ [NC,OR]
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(htpasswd|htaccess|aahtpasswd).*\ HTTP/ [NC]
-RewriteRule .? - [F,NS,L]
-
-# Denies any POST attempt made to a non-existing wp-comments-post.php
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
-RewriteRule .? - [F,NS,L]
-
-### ALTERNATATIVE TO USING ERRORDOCUMENT
-# https://www.htaccesselite.com/d/htaccess-errordocument-examples-vt11.html
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^.*$ /error.php [L]
 
 # --------------------------------
 # [HEADERS] 
