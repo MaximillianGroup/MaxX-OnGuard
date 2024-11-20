@@ -35,11 +35,24 @@
     <FilesMatch "\.(mp3|mp4|avi|acc|flac|wav|ogg)$">
         LimitRequestBody 102400000
     </FilesMatch>
-
-    # DefaultType: the default MIME type the server will use for a document.
-    DefaultType text/html
     
 </IfModule>
+
+# -------------------------------
+# WordPress MultiSite - SubDomain to URL Redirects
+# -------------------------------
+<IfModule mod_rewrite.c>
+        # Client Domain Rewrites
+        RewriteEngine On
+        RewriteBase /
+        # Redirect only frontend URLs from domain.com to clientdomain.com
+        RewriteCond %{HTTP_HOST} ^clientsubdomain\.domain\.com$ [NC]
+        RewriteRule ^(?!ignite|wp-admin)(.*)$ https://clientdomain.com/$1 [L,R=301]
+
+        #This is crucial to prevent search engines from indexing your backend
+        RewriteRule ^/(ignite|wp-admin) - [F,L]
+</IfModule>
+
 
 # -------------------------------
 # [8G FIREWALL] v1.3 20240222
@@ -116,104 +129,64 @@
 # --------------------------------
 # [GZIP] GZIP Compression
 # --------------------------------
+# DEFLATE by Filter Type
 <IfModule mod_deflate.c>
-
-   # AddEncoding allows you to have certain browsers uncompress information on the fly. Note: Not all browsers support this.
-   AddEncoding x-compress .Z
-   AddEncoding x-gzip .gz .tgz
-
-   AddOutputFilterByType DEFLATE text/html text/plain text/xml application/xml application/xhtml+xml text/javascript text/css application/x-javascript
-   BrowserMatch ^Mozilla/4 gzip-only-text/html
-   BrowserMatch ^Mozilla/4\.0[678] no-gzip
-   BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
-    
-    # Force deflate for mangled headers
-    # developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping/
-    <IfModule mod_setenvif.c>
-	<IfModule mod_headers.c>
-	    SetEnvIfNoCase ^(Accept-EncodXng|X-cept-Encoding|X{15}|~{15}|-{15})$ ^((gzip|deflate)\s*,?\s*)+|[X~-]{4,13}$ HAVE_Accept-Encoding
-	    RequestHeader append Accept-Encoding "gzip,deflate" env=HAVE_Accept-Encoding
-	</IfModule>
-    </IfModule>
-
-
-	<IfModule filter_module>
-	    FilterDeclare COMPRESS
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/html
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/css
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/plain
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $text/x-component
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/javascript
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/json
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/xhtml+xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/rss+xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/atom+xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/vnd.ms-fontobject
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $image/svg+xml
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $application/x-font-ttf
-	    FilterProvider  COMPRESS  DEFLATE resp=Content-Type $font/opentype
-	    FilterChain COMPRESS
-	    FilterProtocol COMPRESS DEFLATE change=yes;byteranges=no
-	</IfModule>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/json applicatio>
 </IfModule>
+
+<IfModule mod_headers.c>
+    RewriteEngine On
+    <FilesMatch "\.(js|css)$">
+        # serve brotli as primary ensure no double compression
+        RewriteCond %{HTTP:Accept-encoding} br
+        RewriteCond %{REQUEST_FILENAME}.br -f
+        RewriteRule ^(.*)$ $1.br [T=application/x-brotli,E=no-gzip:1,L]
+        # serve gzip as alternative, ensure no double compression
+        RewriteCond %{HTTP:Accept-encoding} gzip
+        RewriteCond %{REQUEST_FILENAME}.gz -f
+        RewriteRule ^(.*)$ $1.gz [T=application/x-gzip,E=no-brotli:1,L]
+    </FilesMatch>
+
+    <FilesMatch "(\.js\.br|\.css\.br)$">
+      # Serve correct encoding type.
+      Header append Content-Encoding br
+    </FilesMatch>
+    <FilesMatch "(\.js\.gz|\.css.gz)$">
+      # Serve correct encoding type.
+      Header append Content-Encoding gz
+
+      # AddEncoding allows you to have certain browsers uncompress information on the fly. Note: Not all browsers support this.
+      AddEncoding x-compress .Z
+      AddEncoding x-gzip .gz .tgz
+    </FilesMatch>
+
+      # Force proxies to cache brotli &
+      # non-brotli css/js files separately.
+      Header append Vary Accept-Encoding
+    
+</IfModule><IfModule mod_deflate.c>
 
 # -------------------------------------------
 # [CACHE] Caching
 # -------------------------------------------
 <IfModule mod_expires.c>
-  ExpiresActive on
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/avif "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType font/* "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-font-woff "access plus 1 year"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
 
-# Perhaps better to whitelist expires rules? Perhaps.
-  ExpiresDefault                          "access plus 1 month"
-
-# cache.appcache needs re-requests in FF 3.6 (thx Remy ~Introducing HTML5)
-  ExpiresByType text/cache-manifest       "access plus 0 seconds"
-
-# Your document html
-  ExpiresByType text/html                 "access plus 0 seconds"
-
-# Data
-  ExpiresByType text/xml                  "access plus 0 seconds"
-  ExpiresByType application/xml           "access plus 0 seconds"
-  ExpiresByType application/json          "access plus 0 seconds"
-
-# RSS feed
-  ExpiresByType application/rss+xml       "access plus 1 hour"
-
-# Favicon (cannot be renamed)
-  ExpiresByType image/x-icon              "access plus 1 year"
-
-# Media: images, video, audio
-  ExpiresByType image/gif                 "access plus 1 month"
-  ExpiresByType image/png                 "access plus 1 month"
-  ExpiresByType image/jpg                 "access plus 1 month"
-  ExpiresByType image/jpeg                "access plus 1 month"
-  ExpiresByType video/ogg                 "access plus 1 month"
-  ExpiresByType audio/ogg                 "access plus 1 month"
-  ExpiresByType video/mp4                 "access plus 1 month"
-  ExpiresByType video/webm                "access plus 1 month"
-
-# HTC files  (css3pie)
-  ExpiresByType text/x-component          "access plus 1 month"
-
-# Webfonts
-  ExpiresByType font/truetype             "access plus 1 year"
-  ExpiresByType font/opentype             "access plus 1 year"
-  ExpiresByType application/x-font-woff   "access plus 1 year"
-  ExpiresByType image/svg+xml             "access plus 1 year"
-  ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
-
-# CSS and JavaScript
-  ExpiresByType text/css                  "access plus 1 month"
-  ExpiresByType application/javascript    "access plus 1 month"
-  ExpiresByType text/javascript           "access plus 1 month"
-
-  <IfModule mod_headers.c>
-    Header append Cache-Control "public"
-  </IfModule>
-
+    <IfModule mod_headers.c>
+        Header append Cache-Control "public"
+    </IfModule>
 </IfModule>
 
 # -------------------------------------------
@@ -307,107 +280,70 @@
 # END WordPress Multisite
 
 # --------------------------------
-# [WEPP] - Image File Rewrites
+# [WEPP/AVIF] - Image File Rewrites
 # --------------------------------
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Check if browser supports WebP images
-  RewriteCond %{HTTP_ACCEPT} image/webp
+  # Check for AVIF first, then WebP
+  RewriteCond %{HTTP:Accept} image/avif
+  RewriteCond %{DOCUMENT_ROOT}/$1.avif -f
+  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.avif [T=image/avif,E=image_optimized:1,L]
 
-  # Check if WebP replacement image exists
+  RewriteCond %{HTTP:Accept} image/webp
   RewriteCond %{DOCUMENT_ROOT}/$1.webp -f
+  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.webp [T=image/webp,E=image_optimized:1,L]
 
-  # Serve WebP image instead
-  RewriteRule (.+)\.(jpe?g|png|gif)$ $1.webp [T=image/webp,E=REQUEST_image]
+  # Fallback to original image
+  RewriteCond %{ENV:image_optimized} !1
+  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.$2 [L]
+
 </IfModule>
 
 <IfModule mod_headers.c>
-  # Vary: Accept for all the requests to jpeg, png, and gif
-  Header append Vary Accept env=REQUEST_image
+  Header append Vary Accept env=image_optimized
 </IfModule>
 
 <IfModule mod_mime.c>
   AddType image/webp .webp
+  AddType image/avif .avif
+  AddType text/css   .css .min.css
+  AddType application/javascript .js .min.js
 </IfModule>
+
 # --------------------------------
 # [SECURITY REWRITE] - Final Security Rewrites
 # --------------------------------
 <IfModule mod_rewrite.c>
 
-	# Hide php extention
-	RewriteEngine On
-	RewriteCond %{REQUEST_FILENAME}.php -f
-	RewriteRule ^(.+)$ $1.php [L]
+RewriteEngine On
 
-	# Redirect invalid requests to a custom error page
-	RewriteCond %{REQUEST_FILENAME} !-f
-	RewriteCond %{REQUEST_FILENAME} !-d
-	RewriteRule ^.*$ /error.html [L
+# Redirect invalid requests to a custom error page
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^.*$ /error.php [L]
 
-	# Denies obvious trackback spam. See Holy Shmoly!
-	RewriteCond %{REQUEST_METHOD} =POST
-	RewriteCond %{HTTP_USER_AGENT} ^.*(opera|mozilla|firefox|msie|safari).*$ [NC]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.+/trackback/?\ HTTP/ [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies any comment attempt with a blank HTTP_REFERER field, highly indicative of spam. May prevent some visitors from POSTING.
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
-	RewriteCond %{HTTP_REFERER} ^-?$
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies POST requests by blank user-agents. May prevent a small number of visitors from POSTING.
-	RewriteCond %{REQUEST_METHOD} =POST
-	RewriteCond %{HTTP_USER_AGENT} ^-?$
-	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies obvious exploit using bogus graphics
-	RewriteCond %{HTTP:Content-Disposition} \.php [NC]
-	RewriteCond %{HTTP:Content-Type} image/.+ [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies requests that dont contain a HTTP HOST Header.
-	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteCond %{HTTP_HOST} ^$
-	RewriteRule .? - [F,NS,L]
-	
-	Denies any POST request with a content type other than application/x-www-form-urlencoded|multipart/form-data
-	RewriteCond %{REQUEST_METHOD} =POST
-	RewriteCond %{HTTP:Content-Type} !^(application/x-www-form-urlencoded|multipart/form-data.*(boundary.*)?)$ [NC]
-	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies any POST request that doesnt have a Content-Length Header
-	RewriteCond %{REQUEST_METHOD} =POST
-	RewriteCond %{HTTP:Content-Length} ^$
-	RewriteCond %{REQUEST_URI} !^/(wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies any request for a url containing characters other than "a-zA-Z0-9.+/-?=&" 
-	# REALLY helps but may break your site depending on your links.
-	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteCond %{THE_REQUEST} !^[A-Z]{3,9}\ [a-zA-Z0-9\.\+_/\-\?\=\&]+\ HTTP/ [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Block common exploit requests with 403 Forbidden. These can help alot, may break some plugins.
-	RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ ///.*\ HTTP/ [NC,OR]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\=?(http|ftp|ssl|https):/.*\ HTTP/ [NC,OR]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\?\?.*\ HTTP/ [NC,OR]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(asp|ini|dll).*\ HTTP/ [NC,OR]
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.(htpasswd|htaccess|aahtpasswd).*\ HTTP/ [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	# Denies any POST attempt made to a non-existing wp-comments-post.php
-	RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*/wp-comments-post\.php.*\ HTTP/ [NC]
-	RewriteRule .? - [F,NS,L]
-	
-	### ALTERNATATIVE TO USING ERRORDOCUMENT
-	# https://www.htaccesselite.com/d/htaccess-errordocument-examples-vt11.html
-	RewriteCond %{REQUEST_FILENAME} !-f
-	RewriteCond %{REQUEST_FILENAME} !-d
-	RewriteRule ^.*$ /error.php [L]
+# Trackback spam prevention
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP_USER_AGENT} ^.*(opera|mozilla|firefox|msie|safari).*$ [NC]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.+/trackback/?\ HTTP/ [NC]
+RewriteRule .? - [F,NS,L]
+
+# Bogus graphics exploit prevention
+RewriteCond %{HTTP:Content-Disposition} \.php [NC]
+RewriteCond %{HTTP:Content-Type} image/.+ [NC]
+RewriteRule .? - [F,NS,L]
+
+# Deny requests without HTTP_HOST header
+RewriteCond %{REQUEST_URI} !^/(wp-login.php|wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteCond %{HTTP_HOST} ^$
+RewriteRule .? - [F,NS,L]
+
+# Deny POST requests without Content-Length
+RewriteCond %{REQUEST_METHOD} =POST
+RewriteCond %{HTTP:Content-Length} ^$
+RewriteCond %{REQUEST_URI} !^/(wp-admin/|wp-content/plugins/|wp-includes/).* [NC]
+RewriteRule .? - [F,NS,L]
 </IfModule>
 
 # --------------------------------
