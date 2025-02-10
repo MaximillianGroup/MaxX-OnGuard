@@ -35,23 +35,28 @@
     <FilesMatch "\.(mp3|mp4|avi|acc|flac|wav|ogg)$">
         LimitRequestBody 102400000
     </FilesMatch>
-    
 </IfModule>
 
-# -------------------------------
-# WordPress MultiSite - SubDomain to URL Redirects
-# -------------------------------
-<IfModule mod_rewrite.c>
-        # Client Domain Rewrites
-        RewriteEngine On
-        RewriteBase /
-        # Redirect only frontend URLs from domain.com to clientdomain.com
-        RewriteCond %{HTTP_HOST} ^clientsubdomain\.domain\.com$ [NC]
-        RewriteRule ^(?!ignite|wp-admin)(.*)$ https://clientdomain.com/$1 [L,R=301]
 
-        #This is crucial to prevent search engines from indexing your backend
-        RewriteRule ^/(ignite|wp-admin) - [F,L]
+
+# ----------------------------------------------------------------------
+# Better website experience for IE users. We care of them LOL
+# ----------------------------------------------------------------------
+# Force the latest IE version, in various cases when it may fall back to IE7 mode
+# futher details: github.com/rails/rails/commit/123eb25#commitcomment-118920
+# Use ChromeFrame if it's installed for a better experience for the poor IE folks
+<IfModule mod_headers.c>
+  Header set X-UA-Compatible "IE=Edge,chrome=1"
+  # mod_headers cannnot match by content-type, but we don't want to send this header on *everything*...
+  <FilesMatch "\.(js|css|gif|png|jpe?g|pdf|xml|oga|ogg|m4a|ogv|mp4|m4v|webm|svg|svgz|eot|ttf|otf|woff|ico|webp|appcache|manifest|htc|crx|oex|xpi|safariextz|vcf)$" >
+    Header unset X-UA-Compatible
+  </FilesMatch>
+  # Header set P3P "policyref="/w3c/p3p.xml", CP="NOI DSP COR NID CUR ADM DEV OUR BUS""
+  # OR THIS, SIMPLER
+  # Header set P3P "policyref="/w3c/p3p.xml""
 </IfModule>
+
+
 
 
 # -------------------------------
@@ -196,110 +201,115 @@
   RewriteEngine On
   RewriteBase /
 
-  # Proxy server calls especially
-  RewriteCond %{HTTPS} =on
-  RewriteRule ^ - [E=PROTO:https]
-  RewriteCond %{HTTPS} !=on
-  RewriteRule ^ - [E=PROTO:http]
-
-  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-  RewriteRule ^ %{ENV:PROTO}://%1%{REQUEST_URI} [R=301,L]
-
-  # Rewrite to www dynamically
-  RewriteCond %{REQUEST_URI} !^/robots\.txt$ [NC]
-  RewriteCond %{HTTP_HOST} !^www\.[a-z-]+\.[a-z]{2,6} [NC]
-  RewriteCond %{HTTP_HOST} ([a-z-]+\.[a-z]{2,6})$   [NC]
-  RewriteRule ^/(.*)$ https://%1/$1 [R=301,L]
+ 
+ 
 
   ## DENY REQUEST BASED ON REQUEST METHOD
   RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|HEAD)$ [NC]
   RewriteRule ^.*$ - [F]
 
-  # [SPELLCHECK] OPTIONAL - Enable automatic spelling correction for URLs
-    <IfModule mod_speling.c>
-        CheckSpelling On
-    </IfModule>
-	
+# # # [SPELLCHECK] OPTIONAL # # #
+# Enable automatic spelling correction for URLs
+<IfModule mod_speling.c>
+	CheckSpelling On
 </IfModule>
-
+#
 # -------------------------------------------
 # [REWRITES] WordPress Multisite and other Application Rewrites
 # -------------------------------------------
-
-# --- WORDPRESS STANDARD ---
-# BEGIN WordPress
-	<IfModule mod_rewrite.c>
-	    RewriteEngine On
-	    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-	    RewriteBase /  # Or adjust to your WordPress subdirectory if applicable
-	    RewriteRule ^index\.php$ - [L]
-	    RewriteCond %{REQUEST_FILENAME} !-f
-	    RewriteCond %{REQUEST_FILENAME} !-d
-	    RewriteRule . /index.php [L]  # Or adjust path if in a subdirectory
-	</IfModule>
-# END WordPress
-
-# --- WORDPRESS MULTISITE SUBFOLDER --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
-# BEGIN WordPress Multisite
-#<IfModule mod_rewrite.c>
-	#RewriteEngine On
-	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-	#RewriteBase /
-	#RewriteRule ^index\.php$ - [L]
-	
-	# add a trailing slash to /wp-admin
-	#RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
-	
-	#RewriteCond %{REQUEST_FILENAME} -f [OR]
-	#RewriteCond %{REQUEST_FILENAME} -d
-	#RewriteRule ^ - [L]
-	#RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
-	#RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
-	#RewriteRule . index.php [L]
-#</IfModule>
-# END WordPress Multisite
-
-# --- WORDPRESS MULTISITE SUBDOMAIN --- network type: https://wordpress.org/documentation/article/htaccess/#multisite
-# BEGIN WordPress Multisite
-#<IfModule mod_rewrite.c>
-	#RewriteEngine On
-	#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-	#RewriteBase /
-	#RewriteRule ^index\.php$ - [L]
-	
-	# add a trailing slash to /wp-admin
-	#RewriteRule ^wp-admin$ wp-admin/ [R=301,L]
-	
-	#RewriteCond %{REQUEST_FILENAME} -f [OR]
-	#RewriteCond %{REQUEST_FILENAME} -d
-	#RewriteRule ^ - [L]
-	#RewriteRule ^(wp-(content|admin|includes).*) $1 [L]
-	#RewriteRule ^(.*\.php)$ $1 [L]
-	#RewriteRule . index.php [L]
-#<IfModule>
-# END WordPress Multisite
-
+#
+<IfModule mod_rewrite.c>
+#
+# # # BEGIN WORDPRESS STANDARD # # #
+		# RewriteEngine On
+		# RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	 	# # adjust to your WordPress subdirectory if applicable
+		# RewriteBase /  
+		# RewriteRule ^index\.php$ - [L]
+		# RewriteCond %{REQUEST_FILENAME} !-f
+		# RewriteCond %{REQUEST_FILENAME} !-d
+		# RewriteRule . /index.php [L]  # Or adjust path if in a subdirectory
+# # # END WORDPRESS STANDARD # # #
+#
+# # # WORDPRESS MULTISITE SUBFOLDER # # # 
+# network type: https://wordpress.org/documentation/article/htaccess/#multisite
+		# RewriteEngine On
+		# RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	    # # adjust to your WordPress subdirectory if applicable
+		# RewriteBase /
+		# RewriteRule ^index\.php$ - [L]
+		# # add a trailing slash to /wp-admin
+		# RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+		# RewriteCond %{REQUEST_FILENAME} -f [OR]
+		# RewriteCond %{REQUEST_FILENAME} -d
+		# RewriteRule ^ - [L]
+		# RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+		# RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+		# RewriteRule . index.php [L]
+# # # END WORDPRESS MULTISITE SUBDIRECTORY # # #
+#
+# # # BEGIN WORDPRESS MULTISITE SUBDOMAIN # # # 
+# network type: https://wordpress.org/documentation/article/htaccess/#multisite
+		#RewriteEngine On
+		#RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+		#RewriteBase /
+		#RewriteRule ^index\.php$ - [L]
+		# add a trailing slash to /wp-admin
+		#RewriteRule ^wp-admin$ wp-admin/ [R=301,L]
+		#RewriteCond %{REQUEST_FILENAME} -f [OR]
+		#RewriteCond %{REQUEST_FILENAME} -d
+		#RewriteRule ^ - [L]
+		#RewriteRule ^(wp-(content|admin|includes).*) $1 [L]
+		#RewriteRule ^(.*\.php)$ $1 [L]
+		#RewriteRule . index.php [L]
+# # # END WORDPRESS MULTISITE SUBDOMAIN # # # 
+#
+#
+# -------------------------------
+# HTTPS ONLY - Domain Rewrites
+# -------------------------------
+	# # Remove the www dynamically
+	RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+	RewriteRule ^ %{ENV:PROTO}://%1%{REQUEST_URI} [R=301,L]
+	# # Rewrite to www dynamically
+	# RewriteCond %{REQUEST_URI} !^/robots\.txt$ [NC]
+	# RewriteCond %{HTTP_HOST} !^www\.[a-z-]+\.[a-z]{2,6} [NC]
+	# RewriteCond %{HTTP_HOST} ([a-z-]+\.[a-z]{2,6})$   [NC]
+	# RewriteRule ^/(.*)$ https://%1/$1 [R=301,L]
+	# Proxy server calls especially
+	RewriteCond %{HTTPS} =on
+	RewriteRule ^ - [E=PROTO:https]
+	RewriteCond %{HTTPS} !=on
+	RewriteRule ^ - [E=PROTO:http]
+	# Redirect only frontend URLs from domain.com to clientdomain.com
+	RewriteCond %{HTTP_HOST} ^clientsubdomain\.domain\.com$ [NC]
+	RewriteRule ^(?!ignite|wp-admin)(.*)$ https://clientdomain.com/$1 [L,R=301]
+	#This is crucial to prevent search engines from indexing your backend
+	RewriteRule ^/(ignite|wp-admin) - [F,L]
+	# # # END DOMAIN REWRITES # # # 
 # --------------------------------
 # [WEPP/AVIF] - Image File Rewrites
 # --------------------------------
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-
-  # Check for AVIF first, then WebP
-  RewriteCond %{HTTP:Accept} image/avif
-  RewriteCond %{DOCUMENT_ROOT}/$1.avif -f
-  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.avif [T=image/avif,E=image_optimized:1,L]
-
-  RewriteCond %{HTTP:Accept} image/webp
-  RewriteCond %{DOCUMENT_ROOT}/$1.webp -f
-  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.webp [T=image/webp,E=image_optimized:1,L]
-
-  # Fallback to original image
-  RewriteCond %{ENV:image_optimized} !1
-  RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.$2 [L]
-
+	# Check for AVIF browser support, and rewrite
+	RewriteCond %{HTTP:Accept} image/avif
+	RewriteCond %{DOCUMENT_ROOT}/$1.avif -f
+	RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.avif [T=image/avif,E=image_optimized:1,L]
+	# Check for webp browser support, and rewrite
+	RewriteCond %{HTTP:Accept} image/webp
+	RewriteCond %{DOCUMENT_ROOT}/$1.webp -f
+	RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.webp [T=image/webp,E=image_optimized:1,L]
+	# Fallback to original image
+	RewriteCond %{ENV:image_optimized} !1
+	RewriteRule (.+)\.(jpe?g|png|gif|svg)$ $1.$2 [L]
+	# # # END IMAGE REWRITES # # # 
+#
 </IfModule>
-
+#
+# # # END REWRITES # # #
+#
+# --------------------------------
+# [HEADERS] - Image File Rewrites
+# --------------------------------
 <IfModule mod_headers.c>
   Header append Vary Accept env=image_optimized
 </IfModule>
